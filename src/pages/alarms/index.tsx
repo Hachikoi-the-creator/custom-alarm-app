@@ -7,8 +7,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash2, Bell, BellOff } from "lucide-react"
+import Link from "next/link"
 
-interface Alarm {
+type Alarm = {
   id: string
   name: string
   time: string
@@ -65,9 +66,9 @@ export default function AlarmsPage() {
       <div className="container mx-auto p-4 max-w-md">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">My Alarms</h1>
-          <Button onClick={() => router.push("/alarms/edit/new")} size="sm" className="rounded-full">
+          <Link href="/alarms/new" className="rounded-full">
             <Plus className="h-4 w-4" />
-          </Button>
+          </Link>
         </div>
 
         <div className="space-y-3">
