@@ -1,67 +1,78 @@
 import { create } from 'zustand'
 
-type Alarm = {
+// Base alarm method interface
+export  type BaseAlarmMethod = {
   id: string
+  type: 'repeat' | 'repeat_with_volume' | 'custom'
+}
+
+// Method 1: Repeats song X every N minutes
+export type RepeatAlarmMethod = BaseAlarmMethod & {
+  type: 'repeat'
+  song: string
+  interval_minutes: number
+}
+
+// Method 2: Repeats song X every N minutes with volume increment
+export type RepeatWithVolumeAlarmMethod = BaseAlarmMethod & {
+  type: 'repeat_with_volume'
+  song: string
+  interval_minutes: number
+  volume_increment: number
+}
+
+// Method 3: Custom time-based alarm
+export type CustomAlarmMethod = {
+  id: string
+  type: 'custom'
+  hour: number
+  minute: number
+  volume: number
+  song: string
+}
+
+// Union type for all alarm methods
+export type AlarmMethod = RepeatAlarmMethod | RepeatWithVolumeAlarmMethod | CustomAlarmMethod
+
+export type Alarm = {
+  uuid: string
   name: string
-  time: string
-  isActive: boolean
-  days: string[]
-  isWorkdays?: boolean
-  isWeekends?: boolean
+  hour: number
+  minutes: number
+  is_active: boolean
+  days_active: number[]
+  alarm_methods: AlarmMethod[]
 }
 
 type AlarmStore = {
   alarms: Alarm[]
-  addAlarm: (alarm: Omit<Alarm, 'id'>) => void
-  updateAlarm: (id: string, alarm: Alarm) => void
-  deleteAlarm: (id: string) => void
-  toggleAlarm: (id: string) => void
+  addAlarm: (alarm: Omit<Alarm, 'uuid'>) => void
+  updateAlarm: (uuid: string, alarm: Alarm) => void
+  deleteAlarm: (uuid: string) => void
+  toggleAlarm: (uuid: string) => void
 }
 
 export const useAlarmStore = create<AlarmStore>((set) => ({
   alarms: [
-    {
-      id: '1',
-      name: 'Morning Workout',
-      time: '6:30 AM', 
-      isActive: true,
-      days: ['Mon', 'Wed', 'Fri']
-    },
-    {
-      id: '2',
-      name: 'Work Start',
-      time: '8:00 AM',
-      isActive: true,
-      days: [],
-      isWorkdays: true
-    },
-    {
-      id: '3', 
-      name: 'Weekend Sleep In',
-      time: '9:00 AM',
-      isActive: false,
-      days: [],
-      isWeekends: true
-    }
   ],
 
   addAlarm: (alarm) => set((state) => ({
-    alarms: [...state.alarms, { ...alarm, id: Date.now().toString() }]
+    alarms: [...state.alarms, { ...alarm, uuid: Date.now().toString() }]
   })),
 
-  updateAlarm: (id, updatedAlarm) => set((state) => ({
+  updateAlarm: (uuid, updatedAlarm) => set((state) => ({
     alarms: state.alarms.map((alarm) => 
-      alarm.id === id ? { ...alarm, ...updatedAlarm } : alarm
+      alarm.uuid === uuid ? { ...alarm, ...updatedAlarm } : alarm
     )
   })),
 
-  deleteAlarm: (id) => set((state) => ({
-    alarms: state.alarms.filter((alarm) => alarm.id !== id)
+  deleteAlarm: (uuid) => set((state) => ({
+    alarms: state.alarms.filter((alarm) => alarm.uuid !== uuid)
   })),
 
-  toggleAlarm: (id) => set((state) => ({
+  toggleAlarm: (uuid) => set((state) => ({
     alarms: state.alarms.map((alarm) =>
-      alarm.id === id ? { ...alarm, isActive: !alarm.isActive } : alarm
+      alarm.uuid === uuid ? { ...alarm, is_active: !alarm.is_active } : alarm
     )
   }))
 }))

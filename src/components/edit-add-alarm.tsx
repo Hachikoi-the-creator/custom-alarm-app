@@ -1,12 +1,16 @@
-import { useState } from "react"
+"use client"
+
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus, Trash2, Loader2, Calendar } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
+import { useUserStore } from "@/context/user-context"
 
 type CustomAlarmStep = {
   id: string
@@ -14,13 +18,89 @@ type CustomAlarmStep = {
   volume: number
   hour: string
   minutes: string
-}  
+}
 
-export default function EditAddAlarm({ isNew }: { isNew: boolean }) {
+type Alarm = {
+  id: string
+  user_id: string
+  name: string
+  hour: number
+  minutes: number
+  days_active: number[]
+  is_active: boolean
+  stop_method: string
+  custom_snooze: any
+  steps: any
+  snooze_duration_minutes: number
+  snooze_max_count: number | null
+  created_at: string
+  updated_at: string
+}
+
+type DayOption = {
+  value: number
+  label: string
+  shortLabel: string
+}
+
+const DAY_OPTIONS: DayOption[] = [
+  { value: 0, label: "Sunday", shortLabel: "Sun" },
+  { value: 1, label: "Monday", shortLabel: "Mon" },
+  { value: 2, label: "Tuesday", shortLabel: "Tue" },
+  { value: 3, label: "Wednesday", shortLabel: "Wed" },
+  { value: 4, label: "Thursday", shortLabel: "Thu" },
+  { value: 5, label: "Friday", shortLabel: "Fri" },
+  { value: 6, label: "Saturday", shortLabel: "Sat" },
+]
+
+const STOP_METHODS = [
+  "default",
+  "math_puzzle",
+  "captcha",
+  "shake_device",
+  "tap_sequence",
+  "voice_command",
+  "simple_dismiss"
+]
+
+export default function EditAddAlarm({ 
+  isNew, 
+  alarmId 
+}: { 
+  isNew: boolean
+  alarmId?: string 
+}) {
+  // Debug logging for props
+  console.log('EditAddAlarm component rendered with props:', { 
+    isNew, 
+    alarmId, 
+    isNewType: typeof isNew,
+    isNewBoolean: Boolean(isNew),
+    isNewStrict: isNew === true
+  })
+  
+  // Add useEffect to track component lifecycle
+  useEffect(() => {
+    console.log('EditAddAlarm component mounted with isNew:', isNew)
+    return () => {
+      console.log('EditAddAlarm component unmounting, isNew was:', isNew)
+    }
+  }, [isNew])
+  
   const router = useRouter()
+  const { user } = useUserStore()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+
+  // Form state
   const [alarmName, setAlarmName] = useState("")
   const [startTime, setStartTime] = useState({ hour: "07", minutes: "00" })
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h">("12h")
+  const [selectedDays, setSelectedDays] = useState<number[]>([])
+  const [stopMethod, setStopMethod] = useState("default")
+  const [snoozeDuration, setSnoozeDuration] = useState(5)
+  const [snoozeMaxCount, setSnoozeMaxCount] = useState(3)
   const [repeatMode, setRepeatMode] = useState<"simple" | "volume" | "custom">("simple")
   const [repeatTimes, setRepeatTimes] = useState("3")
   const [repeatInterval, setRepeatInterval] = useState("5")
@@ -28,6 +108,52 @@ export default function EditAddAlarm({ isNew }: { isNew: boolean }) {
   const [customSteps, setCustomSteps] = useState<CustomAlarmStep[]>([
     { id: "1", song: "Default Alarm", volume: 50, hour: "07", minutes: "00" },
   ])
+
+  // Load existing alarm data if editing
+  useEffect(() => {
+    if (!isNew && alarmId && user.id) {
+      loadAlarmData()
+    }
+  }, [isNew, alarmId, user.id])
+
+  const loadAlarmData = async () => {
+    if (!user.id) return
+    
+    try {
+      const { data, error } = await supabase
+        .from("alarms")
+        .select("*")
+        .eq("id", alarmId)
+        .eq("user_id", user.id)
+        .single()
+
+      if (error) {
+        console.error('Error loading alarm:', error)
+        setError("Failed to load alarm data")
+        return
+      }
+
+      if (data) {
+        setAlarmName(data.name)
+        setStartTime({ 
+          hour: data.hour.toString().padStart(2, "0"), 
+          minutes: data.minutes.toString().padStart(2, "0") 
+        })
+        setSelectedDays(data.days_active || [])
+        setStopMethod(data.stop_method)
+        setSnoozeDuration(data.snooze_duration_minutes)
+        setSnoozeMaxCount(data.snooze_max_count || 3)
+        
+        // Reset custom steps since we're not using them in the current schema
+        setCustomSteps([
+          { id: "1", song: "Default Alarm", volume: 50, hour: "07", minutes: "00" }
+        ])
+      }
+    } catch (err) {
+      console.error('Error loading alarm:', err)
+      setError("Failed to load alarm data")
+    }
+  }
 
   const formatTime = (hour: string, minutes: string) => {
     if (timeFormat === "12h") {
@@ -61,9 +187,120 @@ export default function EditAddAlarm({ isNew }: { isNew: boolean }) {
     setCustomSteps(customSteps.map((step) => (step.id === id ? { ...step, [field]: value } : step)))
   }
 
-  const handleSave = () => {
-    // Save alarm logic here
-    router.push("/alarms")
+  const toggleDay = (dayValue: number) => {
+    setSelectedDays(prev => 
+      prev.includes(dayValue) 
+        ? prev.filter(d => d !== dayValue)
+        : [...prev, dayValue]
+    )
+  }
+
+  const validateForm = () => {
+    if (!alarmName.trim()) {
+      setError("Please enter an alarm name")
+      return false
+    }
+    if (!user.id) {
+      setError("User not authenticated")
+      return false
+    }
+    return true
+  }
+
+  const handleSave = async () => {
+    if (!validateForm()) return
+
+    setIsLoading(true)
+    setError("")
+    setSuccess("")
+
+    // Debug logging
+    console.log('handleSave called with:', { isNew, alarmId, user: user?.id })
+
+    try {
+      // Convert time format to 24-hour for database
+      let hour = parseInt(startTime.hour)
+      if (timeFormat === "12h" && startTime.hour === "12") {
+        hour = 0
+      } else if (timeFormat === "12h" && parseInt(startTime.hour) > 12) {
+        hour = parseInt(startTime.hour) - 12
+      }
+
+      const alarmData = {
+        user_id: user!.id, // We know user exists here due to validateForm check
+        name: alarmName.trim(),
+        hour: hour,
+        minutes: parseInt(startTime.minutes),
+        days_active: selectedDays.length > 0 ? selectedDays : null,
+        is_active: true,
+        stop_method: stopMethod,
+        custom_snooze: null,
+        steps: null,
+        snooze_duration_minutes: snoozeDuration,
+        snooze_max_count: snoozeMaxCount
+      }
+
+      console.log('About to save alarm data:', alarmData)
+      console.log('isNew value:', isNew)
+      console.log('isNew === true:', isNew === true)
+      console.log('isNew === false:', isNew === false)
+      console.log('Boolean(isNew):', Boolean(isNew))
+      console.log('typeof isNew:', typeof isNew)
+
+      let result
+      if (isNew) {
+        console.log('Creating new alarm...')
+        // Create new alarm
+        const { data, error } = await supabase
+          .from("alarms")
+          .insert([alarmData])
+          .select()
+
+        if (error) {
+          console.error('Error creating alarm:', error)
+          setError("Failed to create alarm")
+          return
+        }
+
+        result = data
+        setSuccess("Alarm created successfully!")
+      } else {
+        console.log('Updating existing alarm...')
+        // Update existing alarm
+        const { data, error } = await supabase
+          .from("alarms")
+          .update(alarmData)
+          .eq("id", alarmId)
+          .eq("user_id", user!.id) // We know user exists here due to validateForm check
+          .select()
+
+        if (error) {
+          console.error('Error updating alarm:', error)
+          setError("Failed to update alarm")
+          return
+        }
+
+        result = data
+        setSuccess("Alarm updated successfully!")
+      }
+
+      // Redirect after a short delay
+      setTimeout(() => {
+        router.push("/alarms")
+      }, 1500)
+
+    } catch (err) {
+      console.error('Error saving alarm:', err)
+      setError("An unexpected error occurred")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Redirect to login if not authenticated
+  if (user.isLoggedIn !== "true") {
+    router.push("/login")
+    return null
   }
 
   return (
@@ -75,6 +312,18 @@ export default function EditAddAlarm({ isNew }: { isNew: boolean }) {
           </Button>
           <h1 className="text-xl font-bold text-foreground">{isNew ? "New Alarm" : "Edit Alarm"}</h1>
         </div>
+
+        {/* Error and Success Messages */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
+            <span className="text-red-800 text-sm">{error}</span>
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-md">
+            <span className="text-green-800 text-sm">{success}</span>
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Alarm Name */}
@@ -132,6 +381,58 @@ export default function EditAddAlarm({ isNew }: { isNew: boolean }) {
               </Select>
             </CardContent>
           </Card>
+
+          {/* Days Selection */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Repeat Days
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-2">
+                {DAY_OPTIONS.map((day) => (
+                  <Button
+                    key={day.value}
+                    variant={selectedDays.includes(day.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleDay(day.value)}
+                    className="h-10 w-10 p-0 text-xs"
+                  >
+                    {day.shortLabel}
+                  </Button>
+                ))}
+              </div>
+              {selectedDays.length === 0 && (
+                <p className="text-sm text-muted-foreground mt-2 text-center">
+                  No days selected - alarm will only ring once
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Stop Method */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Stop Method</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={stopMethod} onValueChange={setStopMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STOP_METHODS.map((method) => (
+                    <SelectItem key={method} value={method}>
+                      {method.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
 
           {/* Repeat Mode */}
           <Card>
@@ -298,11 +599,18 @@ export default function EditAddAlarm({ isNew }: { isNew: boolean }) {
 
           {/* Save Button */}
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => router.back()} className="flex-1">
+            <Button variant="outline" onClick={() => router.back()} className="flex-1" disabled={isLoading}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="flex-1">
-              Save Alarm
+            <Button onClick={handleSave} className="flex-1" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {isNew ? "Creating..." : "Updating..."}
+                </>
+              ) : (
+                `Save ${isNew ? "Alarm" : "Changes"}`
+              )}
             </Button>
           </div>
         </div>

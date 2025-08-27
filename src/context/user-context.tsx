@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 type User = {
   id: string
@@ -8,13 +9,27 @@ type User = {
 }
 
 type UserStore = {
-  user: User | null
+  user: User // Always an object, never null
   setUser: (user: User) => void
   clearUser: () => void
 }
 
-export const useUserStore = create<UserStore>((set) => ({
-  user: null,
-  setUser: (user) => set({ user }),
-  clearUser: () => set({ user: null })
-}))
+const EMPTY_USER: User = {
+  id: "",
+  username: "",
+  passwordHash: "",
+  isLoggedIn: "unknown"
+}
+
+export const useUserStore = create<UserStore>()(
+  persist(
+    (set) => ({
+      user: EMPTY_USER,
+      setUser: (user) => set({ user }), 
+      clearUser: () => set({ user: EMPTY_USER })
+    }),
+    {
+      name: 'user-storage'
+    }
+  )
+)
