@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { ArrowLeft, Plus, Trash2, Loader2, Calendar } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next/router"
 import { supabase } from "@/lib/supabase"
 import { useUserStore } from "@/context/user-context"
 

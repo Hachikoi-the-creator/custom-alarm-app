@@ -5,3 +5,10 @@ export default function NewAlarmPage() {
     <EditAddAlarm isNew={true} />
   )
 }
+
+// Disable static generation since this component uses router
+export const getServerSideProps = async () => {
+  return {
+    props: {}
+  }
+}

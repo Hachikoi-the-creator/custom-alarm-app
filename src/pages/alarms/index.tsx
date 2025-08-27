@@ -1,7 +1,6 @@
-"use client"
+
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
@@ -30,7 +29,6 @@ type Alarm = {
 }
 
 export default function AlarmsPage() {
-  const router = useRouter()
   const { user } = useUserStore()
   const [alarms, setAlarms] = useState<Alarm[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -237,10 +235,10 @@ export default function AlarmsPage() {
             <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No alarms yet</h3>
             <p className="text-muted-foreground mb-4">Create your first alarm to get started</p>
-            <Button onClick={() => router.push("/alarms/edit/new")}>
+            <Link href="/alarms/new">
               <Plus className="h-4 w-4 mr-2" />
               Add Alarm
-            </Button>
+            </Link>
           </div>
         )}
       </div>

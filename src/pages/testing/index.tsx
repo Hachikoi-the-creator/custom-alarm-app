@@ -1,14 +1,26 @@
-"use client"
+
 
 import { useState } from "react"
-import bcrypt from "bcryptjs"
+
 import { supabase } from "@/lib/supabase"
 
-// Exportable password hashing function
+// Exportable password hashing function using API route
 export const hashPassword = async (plainPassword: string) => {
   try {
     const startTime = performance.now()
-    const hashed = await bcrypt.hash(plainPassword, 13)
+    const response = await fetch('/api/auth/hash-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password: plainPassword }),
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to hash password')
+    }
+    
+    const { hashedPassword: hashed } = await response.json()
     const endTime = performance.now()
     const timeTaken = (endTime - startTime).toFixed(2)
     
@@ -52,7 +64,22 @@ export default function TestingPage() {
     setIsLoading(true)
     try {
       const startTime = performance.now()
-      const isMatch = await bcrypt.compare(verifyPassword, hashedPassword)
+      const response = await fetch('/api/auth/compare-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          password: verifyPassword, 
+          hashedPassword: hashedPassword 
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to verify password')
+      }
+      
+      const { isMatch } = await response.json()
       const endTime = performance.now()
       const timeTaken = (endTime - startTime).toFixed(2)
       

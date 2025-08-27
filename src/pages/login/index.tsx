@@ -1,15 +1,11 @@
-"use client"
-
-import type React from "react"
-
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next/router"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
-import bcrypt from "bcryptjs"
+
 import { useUserStore } from "@/context/user-context"
 
 export default function LoginPage() {
@@ -21,11 +17,23 @@ export default function LoginPage() {
   const router = useRouter()
   const { setUser } = useUserStore()
 
-  // Password hashing function (same as in testing page)
+  // Password hashing function using API route
   const hashPassword = async (plainPassword: string) => {
     try {
-      const hashed = await bcrypt.hash(plainPassword, 13)
-      return hashed
+      const response = await fetch('/api/auth/hash-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: plainPassword }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to hash password')
+      }
+      
+      const { hashedPassword } = await response.json()
+      return hashedPassword
     } catch (error) {
       console.error('Error hashing password:', error)
       throw error
@@ -62,8 +70,24 @@ export default function LoginPage() {
         return
       }
 
-      // Step 3: Compare the hashed passwords
-      const isPasswordValid = await bcrypt.compare(password, user.password_hash)
+      // Step 3: Compare the hashed passwords using API route
+      const compareResponse = await fetch('/api/auth/compare-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          password: password, 
+          hashedPassword: user.password_hash 
+        }),
+      })
+      
+      if (!compareResponse.ok) {
+        setError("Failed to verify password")
+        return
+      }
+      
+      const { isMatch: isPasswordValid } = await compareResponse.json()
       
       if (isPasswordValid) {
         setSuccess("Login successful! Redirecting...")
