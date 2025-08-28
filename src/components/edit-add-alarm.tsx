@@ -9,6 +9,8 @@ import { ArrowLeft, Plus, Trash2, Loader2, Calendar } from "lucide-react"
 import { useRouter } from "next/router"
 import { supabase } from "@/lib/supabase"
 import { useUserStore } from "@/context/user-context"
+import HourMinuteSelection from "@/components/hour-minute-selection"
+import { toast } from "sonner"
 
 type CustomAlarmStep = {
   id: string
@@ -88,8 +90,11 @@ export default function EditAddAlarm({
   const router = useRouter()
   const { user } = useUserStore()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Form state
   const [alarmName, setAlarmName] = useState("")
@@ -127,7 +132,7 @@ export default function EditAddAlarm({
 
       if (error) {
         console.error('Error loading alarm:', error)
-        setError("Failed to load alarm data")
+        toast.error("Failed to load alarm data")
         return
       }
 
@@ -149,7 +154,7 @@ export default function EditAddAlarm({
       }
     } catch (err) {
       console.error('Error loading alarm:', err)
-      setError("Failed to load alarm data")
+      toast.error("Failed to load alarm data")
     }
   }
 
@@ -195,11 +200,11 @@ export default function EditAddAlarm({
 
   const validateForm = () => {
     if (!alarmName.trim()) {
-      setError("Please enter an alarm name")
+      toast.error("Please enter an alarm name")
       return false
     }
     if (!user.id) {
-      setError("User not authenticated")
+      toast.error("User not authenticated")
       return false
     }
     return true
@@ -209,8 +214,6 @@ export default function EditAddAlarm({
     if (!validateForm()) return
 
     setIsLoading(true)
-    setError("")
-    setSuccess("")
 
     // Debug logging
     console.log('handleSave called with:', { isNew, alarmId, user: user?.id })
@@ -256,12 +259,12 @@ export default function EditAddAlarm({
 
         if (error) {
           console.error('Error creating alarm:', error)
-          setError("Failed to create alarm")
+          toast.error("Failed to create alarm")
           return
         }
 
         result = data
-        setSuccess("Alarm created successfully!")
+        toast.success("Alarm created successfully!")
       } else {
         console.log('Updating existing alarm...')
         // Update existing alarm
@@ -274,12 +277,12 @@ export default function EditAddAlarm({
 
         if (error) {
           console.error('Error updating alarm:', error)
-          setError("Failed to update alarm")
+          toast.error("Failed to update alarm")
           return
         }
 
         result = data
-        setSuccess("Alarm updated successfully!")
+        toast.success("Alarm updated successfully!")
       }
 
       // Redirect after a short delay
@@ -289,10 +292,15 @@ export default function EditAddAlarm({
 
     } catch (err) {
       console.error('Error saving alarm:', err)
-      setError("An unexpected error occurred")
+      toast.error("An unexpected error occurred")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Don't render until mounted on client side
+  if (!isMounted) {
+    return null
   }
 
   // Redirect to login if not authenticated
@@ -311,17 +319,7 @@ export default function EditAddAlarm({
           <h1 className="text-xl font-bold text-foreground">{isNew ? "New Alarm" : "Edit Alarm"}</h1>
         </div>
 
-        {/* Error and Success Messages */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
-            <span className="text-red-800 text-sm">{error}</span>
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-md">
-            <span className="text-green-800 text-sm">{success}</span>
-          </div>
-        )}
+
 
         <div className="space-y-6">
           {/* Alarm Name */}
@@ -339,35 +337,18 @@ export default function EditAddAlarm({
           </Card>
 
           {/* Start Time */}
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="gap-0">
+            <CardHeader className="">
               <CardTitle className="text-lg">Start Time</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center mb-4">
-                <div className="text-4xl font-bold text-primary mb-2">
-                  {formatTime(startTime.hour, startTime.minutes)}
-                </div>
-                <div className="flex gap-2 justify-center">
-                  <Input
-                    type="number"
-                    min="0"
-                    max={timeFormat === "12h" ? "12" : "23"}
-                    value={startTime.hour}
-                    onChange={(e) => setStartTime({ ...startTime, hour: e.target.value.padStart(2, "0") })}
-                    className="w-16 text-center"
-                  />
-                  <span className="self-center">:</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={startTime.minutes}
-                    onChange={(e) => setStartTime({ ...startTime, minutes: e.target.value.padStart(2, "0") })}
-                    className="w-16 text-center"
-                  />
-                </div>
-              </div>
+            <CardContent className="p-2 flex flex-col gap-2 items-center">
+                <HourMinuteSelection
+                  hour={startTime.hour}
+                  minutes={startTime.minutes}
+                  timeFormat={timeFormat}
+                  onHourChange={(hour) => setStartTime({ ...startTime, hour })}
+                  onMinutesChange={(minutes) => setStartTime({ ...startTime, minutes })}
+                />
               <Select value={timeFormat} onValueChange={(value: "12h" | "24h") => setTimeFormat(value)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -526,7 +507,7 @@ export default function EditAddAlarm({
                           )}
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="flex flex-col gap-2">
                           <div>
                             <Label className="text-xs">Song</Label>
                             <Select
@@ -560,26 +541,16 @@ export default function EditAddAlarm({
                             </div>
                           </div>
 
-                          <div>
                             <Label className="text-xs">Time</Label>
-                            <div className="flex gap-1 mt-1">
-                              <Input
-                                type="number"
-                                min="0"
-                                max={timeFormat === "12h" ? "12" : "23"}
-                                value={step.hour}
-                                onChange={(e) => updateCustomStep(step.id, "hour", e.target.value.padStart(2, "0"))}
-                                className="h-8 text-xs"
+                          <div className="self-center">
+                              <HourMinuteSelection
+                                hour={step.hour}
+                                minutes={step.minutes}
+                                timeFormat={timeFormat}
+                                onHourChange={(hour) => updateCustomStep(step.id, "hour", hour)}
+                                onMinutesChange={(minutes) => updateCustomStep(step.id, "minutes", minutes)}
+                                className="scale-75 self-center"
                               />
-                              <Input
-                                type="number"
-                                min="0"
-                                max="59"
-                                value={step.minutes}
-                                onChange={(e) => updateCustomStep(step.id, "minutes", e.target.value.padStart(2, "0"))}
-                                className="h-8 text-xs"
-                              />
-                            </div>
                           </div>
                         </div>
                       </CardContent>
