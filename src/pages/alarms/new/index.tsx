@@ -6,9 +6,9 @@ export default function NewAlarmPage() {
   )
 }
 
-// Disable static generation since this component uses router
-export const getServerSideProps = async () => {
-  return {
-    props: {}
-  }
-}
+// // Disable static generation since this component uses router
+// export const getServerSideProps = async () => {
+//   return {
+//     props: {}
+//   }
+// }
