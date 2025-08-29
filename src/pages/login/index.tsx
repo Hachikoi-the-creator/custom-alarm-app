@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
 import { Eye, EyeOff } from "lucide-react"
-
 import { useUserStore } from "@/context/user-context"
 import { sha256 } from "js-sha256"
 

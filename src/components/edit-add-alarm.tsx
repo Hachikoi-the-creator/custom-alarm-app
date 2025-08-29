@@ -65,7 +65,7 @@ const STOP_METHODS = [
 
 export default function EditAddAlarm({ 
   isNew, 
-  alarmId 
+  alarmId, 
 }: { 
   isNew: boolean
   alarmId?: string 
@@ -78,14 +78,6 @@ export default function EditAddAlarm({
     isNewBoolean: Boolean(isNew),
     isNewStrict: isNew === true
   })
-  
-  // Add useEffect to track component lifecycle
-  useEffect(() => {
-    console.log('EditAddAlarm component mounted with isNew:', isNew)
-    return () => {
-      console.log('EditAddAlarm component unmounting, isNew was:', isNew)
-    }
-  }, [isNew])
   
   const router = useRouter()
   const { user } = useUserStore()
@@ -201,10 +193,6 @@ export default function EditAddAlarm({
   const validateForm = () => {
     if (!alarmName.trim()) {
       toast.error("Please enter an alarm name")
-      return false
-    }
-    if (!user.id) {
-      toast.error("User not authenticated")
       return false
     }
     return true

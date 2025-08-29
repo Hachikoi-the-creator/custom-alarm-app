@@ -36,12 +36,6 @@ export default function AlarmsPage() {
 
   // Fetch alarms from Supabase
   const fetchAlarms = async () => {
-    if (!user.id) {
-      setError("User not authenticated")
-      setIsLoading(false)
-      return
-    }
-
     try {
       setIsLoading(true)
       setError("")
