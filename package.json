@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "static": "next build && next export"
+    "static": "next build && next export",
+    "clean": "rm -rf .next out"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
@@ -19,9 +20,9 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
     "@supabase/supabase-js": "^2.56.0",
-    "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "js-sha256": "^0.11.1",
     "lucide-react": "^0.542.0",
     "next": "15.5.2",
     "react": "19.1.0",

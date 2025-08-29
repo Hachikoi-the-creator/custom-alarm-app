@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase"
 import { Eye, EyeOff } from "lucide-react"
 
 import { useUserStore } from "@/context/user-context"
+import { sha256 } from "js-sha256"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -22,24 +23,13 @@ export default function LoginPage() {
   // Password hashing function using API route
   const hashPassword = async (plainPassword: string) => {
     try {
-      const response = await fetch('/api/auth/hash-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password: plainPassword }),
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to hash password')
-      }
-      
-      const { hashedPassword } = await response.json()
-      return hashedPassword
+      const hashedPassword = sha256(plainPassword);
+      return hashedPassword;
     } catch (error) {
       console.error('Error hashing password:', error)
       throw error
     }
+  
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -72,24 +62,13 @@ export default function LoginPage() {
         return
       }
 
-      // Step 3: Compare the hashed passwords using API route
-      const compareResponse = await fetch('/api/auth/compare-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          password: password, 
-          hashedPassword: user.password_hash 
-        }),
-      })
+      // Step 3: Compare the hashed 
+      const isPasswordValid = sha256(password) === user.password_hash
       
-      if (!compareResponse.ok) {
+      if (!isPasswordValid) {
         setError("Failed to verify password")
         return
       }
-      
-      const { isMatch: isPasswordValid } = await compareResponse.json()
       
       if (isPasswordValid) {
         setSuccess("Login successful! Redirecting...")
@@ -111,7 +90,7 @@ export default function LoginPage() {
         // Redirect to alarms page after a short delay
         setTimeout(() => {
           router.push("/alarms")
-        }, 1500)
+        }, 500)
       } else {
         setError("Invalid password")
       }
