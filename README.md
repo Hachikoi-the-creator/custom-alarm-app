@@ -35,6 +35,13 @@ A modern, feature-rich alarm application built with Next.js, TypeScript, and Sup
 ## 📋 Roadmap
 
 ### 🔄 In Progress / Next Priority
+- **Native Android App Development**
+  - Capacitor.js integration
+  - Android platform setup
+  - Native device features access
+  - Background service support
+  - Local notifications
+
 - **Active Values Management**
   - Update alarm status (active/inactive)
   - Real-time status synchronization
